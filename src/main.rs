@@ -172,7 +172,7 @@ pub async fn example_handler() -> impl Responder {
             }
             _ => "",
         };
-        fs::write(project_path.join("src/routes/example.rs"), route_example)?;
+        fs::write(project_path.join("src/routes/mod.rs"), route_example)?;
 
         // Update main.rs to include routes
         let main_rs_with_routes = match self.server.as_str() {
