@@ -4,4 +4,5 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-clap = {version = "4.5.40", features = ["derive", "parser"]}
+clap = "4.5.40"
+clap_derive = "4.5.40"
