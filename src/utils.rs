@@ -1,3 +1,4 @@
+//! This module contains utility functions for generating README and .env files.
 pub fn write_readme(name: &str, db: &str, server: &str, orm: &str) -> String {
     format!(
         r#"# {}

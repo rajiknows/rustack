@@ -61,10 +61,10 @@ impl Config {
             Some(if self.orm == "sqlx" { "0.7" } else { "2.0" }),
             Some(vec!["runtime-tokio-rustls", &self.db]),
         )?;
-        install_dependency(&project_path, "jsonwebtoken", Some("8.3"), None)?;
-        install_dependency(&project_path, "serde", Some("1.0"), Some(vec!["derive"]))?;
-        install_dependency(&project_path, "figment", Some("0.10"), Some(vec!["env"]))?;
-        install_dependency(&project_path, "reqwest", Some("0.11"), Some(vec!["json"]))?;
+        install_dependency(&project_path, "jsonwebtoken", None, None)?;
+        install_dependency(&project_path, "serde", None, Some(vec!["derive"]))?;
+        install_dependency(&project_path, "figment", None, Some(vec!["env"]))?;
+        install_dependency(&project_path, "reqwest", None, Some(vec!["json"]))?;
 
         // Create src/main.rs with a server-specific implementation
         let main_rs = match self.server.as_str() {
