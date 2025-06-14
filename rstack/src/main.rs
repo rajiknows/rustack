@@ -6,7 +6,7 @@ use std::io;
 mod config;
 use config::Config;
 
-mod crates;
+mod templates;
 mod utils;
 
 #[derive(Parser, Debug)]
