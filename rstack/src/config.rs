@@ -9,7 +9,6 @@ use std::{
     path::Path,
     process::Command,
 };
-use tera::Context;
 
 #[derive(Debug, Serialize)]
 pub struct Config {
@@ -65,13 +64,6 @@ impl Config {
         install_dependency(&project_dir, "figment", Some("0.10"), Some(vec!["env"]))?;
         install_dependency(&project_dir, "reqwest", Some("0.11"), Some(vec!["json"]))?;
 
-        // Create context for Tera templates
-        let mut context = Context::new();
-        context.insert("name", &self.name);
-        context.insert("db", &self.db);
-        context.insert("orm", &self.orm);
-        context.insert("server", &self.server);
-
         // Create modular folder structure
         create_dir_all(project_dir.join("src/routes"))?;
         create_dir_all(project_dir.join("src/models"))?;
@@ -80,7 +72,7 @@ impl Config {
         // Write Rust files using procedural macros
         let main_code = match self.server.as_str() {
             "axum" => {
-                let main = generate_axum_main!(self.name);
+                let main = generate_axum_main!();
                 quote::quote!(#main).to_string()
             }
             "actix-web" => {
