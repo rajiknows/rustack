@@ -1,4 +1,7 @@
-use crate::utils::{install_dependency, render_template};
+use crate::{
+    templates::{env, readme},
+    utils::{install_dependency, render_template},
+};
 use rstack_macros::{
     generate_actix_main, generate_actix_routes, generate_axum_main, generate_axum_routes,
 };
@@ -45,20 +48,29 @@ impl Config {
             ));
         }
 
-        // Install dependencies
-        install_dependency(
-            &project_dir,
-            &self.server,
-            Some(if self.server == "axum" { "0.7" } else { "4.0" }),
-            None,
-        )?;
+        // server installation
+        match self.server.as_str() {
+            "axum" => {
+                // Install dependencies
+                install_dependency(&project_dir, &self.server, None, None)?;
+            }
+            "actix-web" => install_dependency(&project_dir, &self.server, None, None)?,
+        }
+        // necessory thing
         install_dependency(&project_dir, "tokio", Some("1.0"), Some(vec!["full"]))?;
-        install_dependency(
-            &project_dir,
-            &self.orm,
-            Some(if self.orm == "sqlx" { "0.7" } else { "2.0" }),
-            Some(vec!["runtime-tokio-rustls", &self.db]),
-        )?;
+
+        // orm installation
+        match self.orm.as_str() {
+            "sqlx" => {
+                install_dependency(
+                    &project_dir,
+                    &self.orm,
+                    Some(if self.orm == "sqlx" { "0.7" } else { "2.0" }),
+                    Some(vec!["runtime-tokio-rustls", &self.db]),
+                )?;
+            }
+        }
+
         install_dependency(&project_dir, "jsonwebtoken", Some("8.3"), None)?;
         install_dependency(&project_dir, "serde", Some("1.0"), Some(vec!["derive"]))?;
         install_dependency(&project_dir, "figment", Some("0.10"), Some(vec!["env"]))?;
@@ -86,6 +98,7 @@ impl Config {
                 ))
             }
         };
+
         fs::write(project_dir.join("src/main.rs"), main_code)?;
 
         let routes_code = match self.server.as_str() {
@@ -106,15 +119,8 @@ impl Config {
         };
         fs::write(project_dir.join("src/routes/example.rs"), routes_code)?;
 
-        // Write non-Rust files using Tera
-        fs::write(
-            project_dir.join("README.md"),
-            render_template(crate::templates::readme::TEMPLATE, &context)?,
-        )?;
-        fs::write(
-            project_dir.join(".env"),
-            render_template(crate::templates::env::TEMPLATE, &context)?,
-        )?;
+        fs::write(project_dir.join("README.md"), readme::TEMPLATE)?;
+        fs::write(project_dir.join(".env"), env::TEMPLATE)?;
 
         Ok(())
     }
