@@ -76,6 +76,13 @@ fn main() -> io::Result<()> {
             let orm = orm_options[orm_index].to_string();
 
             let config = Config::new(".".into(), name.clone(), server, db, orm);
+
+            println!(
+                "\n{}",
+                "📦 Installing crates... (this may take a moment)"
+                    .green()
+                    .bold()
+            );
             config.create_project()?;
             println!("\n{} {}", "✅ Created project:".green().bold(), name);
         }

@@ -3,7 +3,9 @@ use crate::{
     templates::{env, readme},
     utils::install_dependency,
 };
+use colored::Colorize;
 use serde::Serialize;
+use std::process::Stdio;
 use std::{
     fs::{self, create_dir_all},
     io,
@@ -33,19 +35,31 @@ impl Config {
 
     pub fn create_project(&self) -> io::Result<()> {
         let project_dir = Path::new(&self.dir).join(&self.name);
-
+        println!("Creating new project {}", self.name.purple());
         // Run `cargo new` to initialize the project
-        let cargo_new = Command::new("cargo")
+        let mut cargo = Command::new("cargo");
+        cargo
             .args(["new", &self.name, "--bin"])
             .current_dir(&self.dir)
             .status()?;
-        if !cargo_new.success() {
+
+        // 🔇 silence stdout + stderr
+        cargo.stdout(Stdio::null()).stderr(Stdio::null());
+
+        let status = cargo.status()?;
+        if !status.success() {
             return Err(io::Error::new(
                 io::ErrorKind::Other,
                 "Failed to run `cargo new`",
             ));
         }
 
+        println!(
+            "\n{}",
+            "📦 Installing crates... (this may take a moment)"
+                .green()
+                .bold()
+        );
         // server installation
         match self.server.as_str() {
             "axum" => install_dependency(&project_dir, &self.server, None, None)?,
