@@ -5,17 +5,15 @@ use crate::{
 };
 use colored::Colorize;
 use serde::Serialize;
-use std::process::Stdio;
 use std::{
     fs::{self, create_dir_all},
     io,
     path::Path,
-    process::Command,
+    process::{Command, Stdio},
 };
 
 #[derive(Debug, Serialize)]
 pub struct Config {
-    dir: String,
     name: String,
     server: String,
     db: String,
@@ -23,9 +21,8 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new(dir: String, name: String, server: String, db: String, orm: String) -> Self {
+    pub fn new(name: String, server: String, db: String, orm: String) -> Self {
         Self {
-            dir,
             name,
             server,
             db,
@@ -34,52 +31,82 @@ impl Config {
     }
 
     pub fn create_project(&self) -> io::Result<()> {
-        let project_dir = Path::new(&self.dir).join(&self.name);
         println!("Creating new project {}", self.name.purple());
-        // Run `cargo new` to initialize the project
-        let mut cargo = Command::new("cargo");
-        cargo
-            .args(["new", &self.name, "--bin"])
-            .current_dir(&self.dir)
-            .status()?;
 
-        // 🔇 silence stdout + stderr
-        cargo.stdout(Stdio::null()).stderr(Stdio::null());
+        let root_dir = Path::new(".");
+        let project_dir = root_dir.join(&self.name);
 
-        let status = cargo.status()?;
-        if !status.success() {
+        if project_dir.exists() {
             return Err(io::Error::new(
-                io::ErrorKind::Other,
-                "Failed to run `cargo new`",
+                io::ErrorKind::AlreadyExists,
+                "Project already exists",
             ));
         }
 
+        create_dir_all(&project_dir)?;
+
+        // Check if user has nightly toolchain
+        let rustc_output = Command::new("rustc")
+            .arg("--version")
+            .output()
+            .unwrap_or_else(|_| panic!("Rust not installed or not in PATH"));
+
+        let rustc_version = String::from_utf8_lossy(&rustc_output.stdout);
+        let use_nightly = rustc_version.contains("nightly");
+
+        let edition = if use_nightly { "2024" } else { "2021" };
+
+        let status = Command::new("cargo")
+            .args(["init", "--bin", "--edition", edition])
+            .current_dir(&project_dir)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()?;
+
+        if !status.success() {
+            return Err(io::Error::new(
+                io::ErrorKind::Other,
+                "Failed to run `cargo init`",
+            ));
+        }
+
+        if use_nightly {
+            let toolchain_toml = r#"[toolchain]
+    channel = "nightly"
+    "#;
+            fs::write(project_dir.join("rust-toolchain.toml"), toolchain_toml)?;
+        } else {
+            eprintln!(
+                "{}",
+                "⚠️  Nightly Rust not detected — falling back to edition 2021"
+                    .yellow()
+                    .bold()
+            );
+            eprintln!("   To enable edition 2024 support, run: rustup override set nightly\n");
+        }
+
         println!(
-            "\n{}",
+            "{}",
             "📦 Installing crates... (this may take a moment)"
                 .green()
                 .bold()
         );
-        // server installation
+
         match self.server.as_str() {
-            "axum" => install_dependency(&project_dir, &self.server, None, None)?,
+            "axum" => install_dependency(&project_dir, &self.server, Some("0.8.4"), None)?,
             "actix-web" => install_dependency(&project_dir, &self.server, None, None)?,
             _ => {}
         }
-        // necessory thing
+
         install_dependency(&project_dir, "tokio", Some("1.0"), Some(vec!["full"]))?;
 
-        // orm installation
-        match self.orm.as_str() {
-            "sqlx" => {
-                install_dependency(
-                    &project_dir,
-                    &self.orm,
-                    Some(if self.orm == "sqlx" { "0.7" } else { "2.0" }),
-                    Some(vec!["runtime-tokio-rustls", &self.db]),
-                )?;
-            }
-            _ => {}
+        if self.orm == "sqlx" {
+            install_dependency(
+                &project_dir,
+                "sqlx",
+                Some("0.7"),
+                Some(vec!["runtime-tokio-rustls", &self.db]),
+            )?;
         }
 
         install_dependency(&project_dir, "jsonwebtoken", Some("8.3"), None)?;
@@ -87,12 +114,10 @@ impl Config {
         install_dependency(&project_dir, "figment", Some("0.10"), Some(vec!["env"]))?;
         install_dependency(&project_dir, "reqwest", Some("0.11"), Some(vec!["json"]))?;
 
-        // Create modular folder structure
         create_dir_all(project_dir.join("src/routes"))?;
         create_dir_all(project_dir.join("src/models"))?;
         create_dir_all(project_dir.join("src/config"))?;
 
-        // Write Rust files using procedural macros
         let main_code = match self.server.as_str() {
             "axum" => AXUM_MAIN.to_string(),
             "actix-web" => ACTIX_MAIN.to_string(),
@@ -103,7 +128,6 @@ impl Config {
                 ))
             }
         };
-
         fs::write(project_dir.join("src/main.rs"), main_code)?;
 
         let routes_code = match self.server.as_str() {
@@ -116,7 +140,6 @@ impl Config {
                 ))
             }
         };
-
         fs::write(project_dir.join("src/routes/example.rs"), routes_code)?;
         fs::write(project_dir.join("README.md"), readme::TEMPLATE)?;
         fs::write(project_dir.join(".env"), env::TEMPLATE)?;

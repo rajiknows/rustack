@@ -16,6 +16,8 @@ pub fn install_dependency(
     cmd.arg("add").current_dir(project_dir);
     if let Some(ver) = version {
         cmd.arg(format!("{}@{}", dep, ver));
+    } else {
+        cmd.arg(dep);
     }
 
     if let Some(feat) = features {
@@ -25,7 +27,7 @@ pub fn install_dependency(
     }
 
     // 🔇 silence stdout + stderr
-    cmd.stdout(Stdio::null()).stderr(Stdio::null());
+    // cmd.stdout(Stdio::null()).stderr(Stdio::null());
 
     let status = cmd.status()?;
     if !status.success() {
