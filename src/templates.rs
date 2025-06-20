@@ -22,3 +22,8 @@ This is an open-source project! Feel free to contribute on GitHub.
 pub mod env {
     pub const TEMPLATE: &str = r#"DATABASE_URL={{ db }}://user:password@localhost:5432/{{ name }}"#;
 }
+
+pub const AXUM_MAIN: &str = include_str!("../templates/axum_main.rs");
+pub const AXUM_ROUTES: &str = include_str!("../templates/axum_routes.rs");
+pub const ACTIX_MAIN: &str = include_str!("../templates/actix_main.rs");
+pub const ACTIX_ROUTES: &str = include_str!("../templates/actix_routes.rs");

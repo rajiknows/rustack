@@ -1,9 +1,7 @@
+use crate::templates::{ACTIX_MAIN, ACTIX_ROUTES, AXUM_MAIN, AXUM_ROUTES};
 use crate::{
     templates::{env, readme},
-    utils::{install_dependency, render_template},
-};
-use rstack_macros::{
-    generate_actix_main, generate_actix_routes, generate_axum_main, generate_axum_routes,
+    utils::install_dependency,
 };
 use serde::Serialize;
 use std::{
@@ -50,11 +48,9 @@ impl Config {
 
         // server installation
         match self.server.as_str() {
-            "axum" => {
-                // Install dependencies
-                install_dependency(&project_dir, &self.server, None, None)?;
-            }
+            "axum" => install_dependency(&project_dir, &self.server, None, None)?,
             "actix-web" => install_dependency(&project_dir, &self.server, None, None)?,
+            _ => {}
         }
         // necessory thing
         install_dependency(&project_dir, "tokio", Some("1.0"), Some(vec!["full"]))?;
@@ -69,6 +65,7 @@ impl Config {
                     Some(vec!["runtime-tokio-rustls", &self.db]),
                 )?;
             }
+            _ => {}
         }
 
         install_dependency(&project_dir, "jsonwebtoken", Some("8.3"), None)?;
@@ -83,14 +80,8 @@ impl Config {
 
         // Write Rust files using procedural macros
         let main_code = match self.server.as_str() {
-            "axum" => {
-                let main = generate_axum_main!();
-                quote::quote!(#main).to_string()
-            }
-            "actix-web" => {
-                let main = generate_actix_main!(self.name);
-                quote::quote!(#main).to_string()
-            }
+            "axum" => AXUM_MAIN.to_string(),
+            "actix-web" => ACTIX_MAIN.to_string(),
             _ => {
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidInput,
@@ -102,14 +93,8 @@ impl Config {
         fs::write(project_dir.join("src/main.rs"), main_code)?;
 
         let routes_code = match self.server.as_str() {
-            "axum" => {
-                let routes = generate_axum_routes!();
-                quote::quote!(#routes).to_string()
-            }
-            "actix-web" => {
-                let routes = generate_actix_routes!();
-                quote::quote!(#routes).to_string()
-            }
+            "axum" => AXUM_ROUTES.to_string(),
+            "actix-web" => ACTIX_ROUTES.to_string(),
             _ => {
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidInput,
@@ -117,8 +102,8 @@ impl Config {
                 ))
             }
         };
-        fs::write(project_dir.join("src/routes/example.rs"), routes_code)?;
 
+        fs::write(project_dir.join("src/routes/example.rs"), routes_code)?;
         fs::write(project_dir.join("README.md"), readme::TEMPLATE)?;
         fs::write(project_dir.join(".env"), env::TEMPLATE)?;
 
