@@ -39,3 +39,39 @@ pub fn install_dependency(
 
     Ok(())
 }
+
+pub fn has_nightly_installed() -> bool {
+    if let Ok(output) = Command::new("rustup")
+        .args(["show", "active-toolchain"])
+        .output()
+    {
+        let output_str = String::from_utf8_lossy(&output.stdout);
+        return output_str.contains("nightly");
+    }
+    false
+}
+
+pub fn install_nightly_toolchain() -> io::Result<()> {
+    let status = Command::new("rustup")
+        .args(["install", "nightly"])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()?;
+
+    if !status.success() {
+        return Err(io::Error::new(
+            io::ErrorKind::Other,
+            "Failed to install nightly toolchain",
+        ));
+    }
+
+    Ok(())
+}
+
+pub fn write_rust_toolchain_file(project_dir: &Path) -> io::Result<()> {
+    let toolchain_toml = r#"[toolchain]
+channel = "nightly"
+"#;
+    std::fs::write(project_dir.join("rust-toolchain.toml"), toolchain_toml)?;
+    Ok(())
+}

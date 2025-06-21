@@ -1,4 +1,5 @@
 use crate::templates::{ACTIX_MAIN, ACTIX_ROUTES, AXUM_MAIN, AXUM_ROUTES};
+use crate::utils::{has_nightly_installed, install_nightly_toolchain, write_rust_toolchain_file};
 use crate::{
     templates::{env, readme},
     utils::install_dependency,
@@ -45,20 +46,23 @@ impl Config {
 
         create_dir_all(&project_dir)?;
 
-        // Check if user has nightly toolchain
-        let rustc_output = Command::new("rustc")
-            .arg("--version")
-            .output()
-            .unwrap_or_else(|_| panic!("Rust not installed or not in PATH"));
+        let mut use_nightly = false;
+        let is_axum_nightly = self.server == "axum-nightly";
 
-        let rustc_version = String::from_utf8_lossy(&rustc_output.stdout);
-        let use_nightly = rustc_version.contains("nightly");
+        if is_axum_nightly {
+            use_nightly = has_nightly_installed();
+            if !use_nightly {
+                println!("{}", "🔧 Installing nightly toolchain...".blue());
+                install_nightly_toolchain()?;
+                use_nightly = true;
+            }
+        }
 
         let edition = if use_nightly { "2024" } else { "2021" };
 
         let status = Command::new("cargo")
-            .args(["init", "--bin", "--edition", edition])
-            .current_dir(&project_dir)
+            .args(["init", "--bin", "--edition", edition, &self.name])
+            .current_dir(root_dir)
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .status()?;
@@ -71,11 +75,8 @@ impl Config {
         }
 
         if use_nightly {
-            let toolchain_toml = r#"[toolchain]
-    channel = "nightly"
-    "#;
-            fs::write(project_dir.join("rust-toolchain.toml"), toolchain_toml)?;
-        } else {
+            write_rust_toolchain_file(&project_dir)?;
+        } else if is_axum_nightly {
             eprintln!(
                 "{}",
                 "⚠️  Nightly Rust not detected — falling back to edition 2021"
@@ -93,8 +94,13 @@ impl Config {
         );
 
         match self.server.as_str() {
-            "axum" => install_dependency(&project_dir, &self.server, Some("0.8.4"), None)?,
-            "actix-web" => install_dependency(&project_dir, &self.server, None, None)?,
+            "axum-nightly" | "axum" => {
+                let axum_version = if use_nightly { "0.8.4" } else { "0.7.5" };
+                install_dependency(&project_dir, "axum", Some(axum_version), None)?;
+            }
+            "actix-web" => {
+                install_dependency(&project_dir, "actix-web", None, None)?;
+            }
             _ => {}
         }
 
@@ -119,7 +125,7 @@ impl Config {
         create_dir_all(project_dir.join("src/config"))?;
 
         let main_code = match self.server.as_str() {
-            "axum" => AXUM_MAIN.to_string(),
+            "axum" | "axum-nightly" => AXUM_MAIN.to_string(),
             "actix-web" => ACTIX_MAIN.to_string(),
             _ => {
                 return Err(io::Error::new(
@@ -131,7 +137,7 @@ impl Config {
         fs::write(project_dir.join("src/main.rs"), main_code)?;
 
         let routes_code = match self.server.as_str() {
-            "axum" => AXUM_ROUTES.to_string(),
+            "axum" | "axum-nightly" => AXUM_ROUTES.to_string(),
             "actix-web" => ACTIX_ROUTES.to_string(),
             _ => {
                 return Err(io::Error::new(
