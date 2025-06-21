@@ -1,5 +1,7 @@
 use crate::templates::{ACTIX_MAIN, ACTIX_ROUTES, AXUM_MAIN, AXUM_ROUTES};
-use crate::utils::{has_nightly_installed, install_nightly_toolchain, write_rust_toolchain_file};
+use crate::utils::{
+    has_nightly_installed, install_nightly_toolchain, set_nightly, write_rust_toolchain_file,
+};
 use crate::{
     templates::{env, readme},
     utils::install_dependency,
@@ -50,12 +52,13 @@ impl Config {
         let is_axum_nightly = self.server == "axum-nightly";
 
         if is_axum_nightly {
-            use_nightly = has_nightly_installed();
-            if !use_nightly {
+            let has_nightly = has_nightly_installed();
+            if !has_nightly {
                 println!("{}", "🔧 Installing nightly toolchain...".blue());
                 install_nightly_toolchain()?;
-                use_nightly = true;
             }
+            set_nightly()?;
+            use_nightly = true;
         }
 
         let edition = if use_nightly { "2024" } else { "2021" };

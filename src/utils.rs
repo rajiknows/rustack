@@ -41,14 +41,28 @@ pub fn install_dependency(
 }
 
 pub fn has_nightly_installed() -> bool {
-    if let Ok(output) = Command::new("rustup")
-        .args(["show", "active-toolchain"])
-        .output()
-    {
+    if let Ok(output) = Command::new("rustup").args(["show"]).output() {
         let output_str = String::from_utf8_lossy(&output.stdout);
         return output_str.contains("nightly");
     }
     false
+}
+
+pub fn set_nightly() -> io::Result<()> {
+    println!("defaulting to nightly version");
+    let status = Command::new("rustup")
+        .args(["default", "nightly"])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()?;
+
+    if !status.success() {
+        return Err(io::Error::new(
+            io::ErrorKind::Other,
+            "Failed to set nightly as default toolchain",
+        ));
+    };
+    Ok(())
 }
 
 pub fn install_nightly_toolchain() -> io::Result<()> {

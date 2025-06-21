@@ -48,14 +48,25 @@ fn main() -> io::Result<()> {
                 .interact_text()
                 .unwrap();
 
-            let server_options = vec!["axum", "actix-web"];
+            let server_options = vec![
+                ("actix [fast, more abstracted]", "actix-web"),
+                ("axum [fast, less abstracted]", "axum"),
+                (
+                    "axum-nightly [latest features, less abstracted]",
+                    "axum-nightly",
+                ),
+            ];
+
+            let labels: Vec<&str> = server_options.iter().map(|(label, _)| *label).collect();
+
             let server_index = Select::with_theme(&ColorfulTheme::default())
                 .with_prompt("Choose a server framework")
                 .default(0)
-                .items(&server_options)
+                .items(&labels)
                 .interact()
                 .unwrap();
-            let server = server_options[server_index].to_string();
+
+            let server = server_options[server_index].1.to_string();
 
             let db_options = vec!["postgres", "mysql"];
             let db_index = Select::with_theme(&ColorfulTheme::default())
