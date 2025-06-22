@@ -27,3 +27,4 @@ pub const AXUM_MAIN: &str = include_str!("../templates/axum_main.rs");
 pub const AXUM_ROUTES: &str = include_str!("../templates/axum_routes.rs");
 pub const ACTIX_MAIN: &str = include_str!("../templates/actix_main.rs");
 pub const ACTIX_ROUTES: &str = include_str!("../templates/actix_routes.rs");
+pub const CONFIG_FILE: &str = include_str!("../templates/config.rs");

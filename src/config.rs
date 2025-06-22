@@ -1,4 +1,4 @@
-use crate::templates::{ACTIX_MAIN, ACTIX_ROUTES, AXUM_MAIN, AXUM_ROUTES};
+use crate::templates::{ACTIX_MAIN, ACTIX_ROUTES, AXUM_MAIN, AXUM_ROUTES, CONFIG_FILE};
 use crate::utils::{
     has_nightly_installed, install_nightly_toolchain, set_nightly, write_rust_toolchain_file,
 };
@@ -152,6 +152,10 @@ impl Config {
         fs::write(project_dir.join("src/routes/example.rs"), routes_code)?;
         fs::write(project_dir.join("README.md"), readme::TEMPLATE)?;
         fs::write(project_dir.join(".env"), env::TEMPLATE)?;
+        fs::write(
+            project_dir.join("src/config/config.rs"),
+            CONFIG_FILE.to_string(),
+        )?;
 
         Ok(())
     }
